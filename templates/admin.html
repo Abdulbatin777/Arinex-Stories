@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>Admin Dashboard - StoryWorld</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<header>
+
+    <h1>📚 StoryWorld Admin</h1>
+
+    <nav>
+
+        <a href="{{ url_for('index') }}">
+            View Website
+        </a>
+
+        <a href="{{ url_for('upload') }}">
+            + New Story
+        </a>
+
+        <a href="{{ url_for('admin_logout') }}">
+            Logout
+        </a>
+
+    </nav>
+
+</header>
+
+
+<main>
+
+<h2>Dashboard</h2>
+
+
+<section class="stats">
+
+    <div class="stat-card">
+        <h3>{{ story_count }}</h3>
+        <p>Stories</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>{{ chapter_count }}</h3>
+        <p>Chapters</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>{{ comment_count }}</h3>
+        <p>Comments</p>
+    </div>
+
+</section>
+
+
+<h2>Manage Stories</h2>
+
+{% for story in stories %}
+
+<div class="admin-story">
+
+    <div>
+
+        <h3>{{ story['title'] }}</h3>
+
+        <p>
+            By {{ story['author'] }}
+        </p>
+
+        <p>
+            Category: {{ story['category'] }}
+        </p>
+
+        <p>
+            ❤️ {{ story['likes'] }} likes
+        </p>
+
+    </div>
+
+
+    <div class="admin-actions">
+
+        <a
+            class="button"
+            href="{{ url_for('story', story_id=story['id']) }}"
+        >
+            View
+        </a>
+
+
+        <a
+            class="button"
+            href="{{ url_for('edit_story', story_id=story['id']) }}"
+        >
+            Edit
+        </a>
+
+
+        <a
+            class="button"
+            href="{{ url_for('add_chapter', story_id=story['id']) }}"
+        >
+            Add Chapter
+        </a>
+
+
+        <form
+            method="POST"
+            action="{{ url_for('delete_story', story_id=story['id']) }}"
+            onsubmit="return confirm('Delete this story and all its chapters?');"
+        >
+
+            <button class="danger" type="submit">
+                Delete
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% else %}
+
+<p>No stories yet.</p>
+
+{% endfor %}
+
+
+<h2>Manage Comments</h2>
+
+{% for comment in comments %}
+
+<div class="admin-comment">
+
+    <strong>
+        {{ comment['name'] }}
+    </strong>
+
+    <p>
+        {{ comment['comment'] }}
+    </p>
+
+    <small>
+        Story: {{ comment['story_title'] }}
+    </small>
+
+    <form
+        method="POST"
+        action="{{ url_for('delete_comment', comment_id=comment['id']) }}"
+        onsubmit="return confirm('Delete this comment?');"
+    >
+
+        <button class="danger" type="submit">
+            Delete Comment
+        </button>
+
+    </form>
+
+</div>
+
+{% else %}
+
+<p>No comments yet.</p>
+
+{% endfor %}
+
+</main>
+
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>Edit Chapter - StoryWorld</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<header>
+
+    <h1>📚 Edit Chapter</h1>
+
+    <nav>
+
+        <a href="{{ url_for('admin_dashboard') }}">
+            Dashboard
+        </a>
+
+        <a href="{{ url_for('admin_logout') }}">
+            Logout
+        </a>
+
+    </nav>
+
+</header>
+
+
+<main>
+
+<div class="form-container">
+
+    <h2>
+        Chapter {{ chapter['chapter_number'] }}
+    </h2>
+
+    <form method="POST">
+
+        <label>Chapter Title</label>
+
+        <input
+            type="text"
+            name="title"
+            value="{{ chapter['title'] }}"
+            required
+        >
+
+
+        <label>Chapter Content</label>
+
+        <textarea
+            name="content"
+            rows="20"
+            required
+        >{{ chapter['content'] }}</textarea>
+
+
+        <button type="submit">
+            Save Chapter
+        </button>
+
+    </form>
+
+
+    <form
+        method="POST"
+        action="{{ url_for('delete_chapter', chapter_id=chapter['id']) }}"
+        onsubmit="return confirm('Delete this chapter?');"
+    >
+
+        <button class="danger" type="submit">
+            Delete Chapter
+        </button>
+
+    </form>
+
+</div>
+
+</main>
+
+</body>
+</html>

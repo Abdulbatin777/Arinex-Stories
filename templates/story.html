@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>{{ story['title'] }} - StoryWorld</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<header>
+
+    <h1>📚 StoryWorld</h1>
+
+    <nav>
+        <a href="{{ url_for('index') }}">Home</a>
+
+        {% if session.get('admin_logged_in') %}
+            <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+        {% endif %}
+    </nav>
+
+</header>
+
+
+<main>
+
+<section class="story-details">
+
+    {% if story['cover'] %}
+
+        <img
+            class="story-cover"
+            src="{{ url_for('static', filename='uploads/' + story['cover']) }}"
+            alt="{{ story['title'] }}"
+        >
+
+    {% endif %}
+
+    <div>
+
+        <h2>{{ story['title'] }}</h2>
+
+        <p>
+            <strong>Author:</strong>
+            {{ story['author'] }}
+        </p>
+
+        <p>
+            <strong>Category:</strong>
+            {{ story['category'] }}
+        </p>
+
+        <p>
+            ❤️ {{ story['likes'] }} likes
+        </p>
+
+        <form
+            method="POST"
+            action="{{ url_for('like_story', story_id=story['id']) }}"
+        >
+
+            <button class="like-button" type="submit">
+                ❤️ Like Story
+            </button>
+
+        </form>
+
+        <button
+            class="bookmark-button"
+            onclick="bookmarkStory()"
+            type="button"
+        >
+            🔖 Bookmark
+        </button>
+
+    </div>
+
+</section>
+
+
+<section>
+
+    <h2>Chapters</h2>
+
+    {% if chapters %}
+
+        <div class="chapter-list">
+
+            {% for chapter in chapters %}
+
+                <div class="chapter-item">
+
+                    <div>
+
+                        <strong>
+                            Chapter {{ chapter['chapter_number'] }}
+                        </strong>
+
+                        <h3>
+                            {{ chapter['title'] }}
+                        </h3>
+
+                    </div>
+
+                    <div>
+
+                        <a
+                            class="button"
+                            href="{{ url_for('chapter', chapter_id=chapter['id']) }}"
+                        >
+                            Read
+                        </a>
+
+                        {% if session.get('admin_logged_in') %}
+
+                            <a
+                                class="button"
+                                href="{{ url_for('edit_chapter', chapter_id=chapter['id']) }}"
+                            >
+                                Edit
+                            </a>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <p>No chapters have been published yet.</p>
+
+    {% endif %}
+
+</section>
+
+
+<section class="comments">
+
+    <h2>Comments</h2>
+
+    <form
+        method="POST"
+        action="{{ url_for('comment_story', story_id=story['id']) }}"
+    >
+
+        <input
+            type="text"
+            name="name"
+            placeholder="Your name/nickname"
+            required
+        >
+
+        <textarea
+            name="comment"
+            placeholder="Write your comment..."
+            required
+        ></textarea>
+
+        <button type="submit">
+            Post Comment
+        </button>
+
+    </form>
+
+
+    {% for comment in comments %}
+
+        <div class="comment">
+
+            <strong>
+                {{ comment['name'] }}
+            </strong>
+
+            <p>
+                {{ comment['comment'] }}
+            </p>
+
+            {% if session.get('admin_logged_in') %}
+
+                <form
+                    method="POST"
+                    action="{{ url_for('delete_comment', comment_id=comment['id']) }}"
+                >
+                    <button type="submit">
+                        Delete
+                    </button>
+                </form>
+
+            {% endif %}
+
+        </div>
+
+    {% else %}
+
+        <p>No comments yet.</p>
+
+    {% endfor %}
+
+</section>
+
+</main>
+
+
+<script>
+
+function bookmarkStory() {
+
+    localStorage.setItem(
+        "bookmarkedStory",
+        "{{ story['id'] }}"
+    );
+
+    alert("Story bookmarked!");
+
+}
+
+</script>
+
+</body>
+</html>

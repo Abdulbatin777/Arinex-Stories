@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>{{ chapter['title'] }} - StoryWorld</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<header>
+
+    <h1>📚 StoryWorld</h1>
+
+    <nav>
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('story', story_id=chapter['story_id']) }}">
+            Story
+        </a>
+    </nav>
+
+</header>
+
+
+<main>
+
+<article class="reader">
+
+    <p class="story-name">
+        {{ chapter['story_title'] }}
+    </p>
+
+    <h1>
+        Chapter {{ chapter['chapter_number'] }}:
+        {{ chapter['title'] }}
+    </h1>
+
+    <div class="progress-container">
+        <div id="progressBar"></div>
+    </div>
+
+    <div
+        id="storyContent"
+        class="story-content"
+    >
+        {{ chapter['content'] }}
+    </div>
+
+
+    <div class="chapter-navigation">
+
+        {% if previous %}
+
+            <a
+                class="button"
+                href="{{ url_for('chapter', chapter_id=previous['id']) }}"
+            >
+                ← Previous
+            </a>
+
+        {% endif %}
+
+
+        {% if next_chapter %}
+
+            <a
+                class="button"
+                href="{{ url_for('chapter', chapter_id=next_chapter['id']) }}"
+            >
+                Next →
+            </a>
+
+        {% endif %}
+
+    </div>
+
+</article>
+
+</main>
+
+
+<script>
+
+const storyContent =
+    document.getElementById("storyContent");
+
+const progressBar =
+    document.getElementById("progressBar");
+
+const storageKey =
+    "reading_position_{{ chapter['id'] }}";
+
+
+window.addEventListener("load", function() {
+
+    const savedPosition =
+        localStorage.getItem(storageKey);
+
+    if (savedPosition) {
+
+        window.scrollTo(
+            0,
+            parseInt(savedPosition)
+        );
+
+    }
+
+});
+
+
+window.addEventListener("scroll", function() {
+
+    localStorage.setItem(
+        storageKey,
+        window.scrollY
+    );
+
+    const scrollTop =
+        window.scrollY;
+
+    const documentHeight =
+        document.documentElement.scrollHeight
+        - window.innerHeight;
+
+    if (documentHeight > 0) {
+
+        const progress =
+            (scrollTop / documentHeight) * 100;
+
+        progressBar.style.width =
+            progress + "%";
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>

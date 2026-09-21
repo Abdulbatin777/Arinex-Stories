@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>About - StoryWorld</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<header>
+
+    <h1>📚 StoryWorld</h1>
+
+    <nav>
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('about') }}">About</a>
+
+        {% if session.get('admin_logged_in') %}
+            <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+        {% endif %}
+    </nav>
+
+</header>
+
+
+<main>
+
+    <section class="about-page">
+
+        <h2>About StoryWorld</h2>
+
+        <p>
+            Welcome to <strong>StoryWorld</strong>, a place where
+            readers can discover and enjoy interesting stories.
+        </p>
+
+        <p>
+            StoryWorld is designed to make reading stories simple,
+            enjoyable, and accessible. Explore different categories,
+            open stories, read chapters, like stories, bookmark your
+            favorites, and share your thoughts through comments.
+        </p>
+
+        <h2>Our Mission</h2>
+
+        <p>
+            Our mission is to create a simple online space where
+            stories can be published and enjoyed by readers.
+        </p>
+
+        <h2>For Readers</h2>
+
+        <p>
+            You can browse stories without creating an account.
+            Find a story you like, read its chapters, leave comments,
+            and bookmark stories you want to return to.
+        </p>
+  
+  <hr>
+  <p><h2>Copyright & Intellectual Property</h2></p>
+
+Effective Date: September 21, 2026</p>
+
+1. Copyright
+
+All content and materials available on this website, including text, images, graphics, logos, icons, designs, software, source code, user interface elements, and other original materials, are protected by applicable copyright and intellectual property laws.
+
+Unless otherwise stated, these materials are owned by or licensed to Arinex.</p>
+
+2. Use of Website Content<br>
+
+You may access and use this website for lawful personal or permitted purposes. However, you may not, without prior written permission:
+<br>
+- Copy or reproduce substantial portions of the website.<br>
+- Republish or redistribute website content.<br>
+- Modify, sell, or commercially exploit our content.<br>
+- Copy the website's design, branding, or user interface.<br>
+- Reproduce or distribute our source code.<br>
+- Remove copyright, trademark, or other ownership notices.<br>
+- Present our content or work as your own.<br>
+
+Permission may be granted for specific uses at our discretion and may be subject to conditions.
+</p>
+3. Trademarks and Branding<br>
+
+The Arinex name, logo, brand identity, graphics, and associated visual elements may constitute trademarks or protected intellectual property.
+<br>
+You may not use our name, logo, or branding in a way that suggests sponsorship, partnership, endorsement, or ownership without prior written authorization.
+</p>
+4. User-Submitted Content<br>
+
+If users are permitted to submit content to this website, users remain responsible for the content they submit and must have the necessary rights or permissions to use that content.
+<br>
+By submitting content, you agree that the website may use, display, store, or process that content as necessary to provide and operate the relevant services, subject to the website's applicable terms and policies.
+</p>
+5. Third-Party Content
+<br>
+Some materials displayed on this website may belong to third parties and may be used under permission, license, or applicable legal exceptions.
+<br>
+Third-party names, logos, trademarks, and copyrighted materials remain the property of their respective owners.
+</p>
+6. Copyright Infringement
+<br>
+If you believe that material appearing on this website infringes your copyright or other intellectual property rights, please contact us with sufficient information to identify:
+<br>
+1. The copyrighted work or intellectual property involved.<br>
+2. The material you believe infringes your rights.<br>
+3. Your contact information.<br>
+4. Evidence or information demonstrating your ownership or authorization to act on behalf of the owner.<br>
+
+We will review legitimate complaints and take appropriate action where necessary.
+</p>
+7. Changes to This Notice<br>
+
+We may update this Copyright & Intellectual Property Notice from time to time to reflect changes to the website, our services, or applicable requirements.
+<br>
+Any updated version will be posted on this page with a revised effective date.
+</p>
+8. Contact
+
+For copyright, intellectual property, licensing, or permission-related enquiries, please contact us through the official contact us below.</p>
+<a href="https://wa.me/2347052585787?">Contact us </a><br>
+        <h2>About the Developer</h2>
+
+        <p>
+            <strong>StoryWorld is a web project developed by <abbr title="Arilesere Abdulbatin">Arinex</abbr> </strong>
+        </p>
+
+    </section>
+
+</main>
+
+</body>
+</html>

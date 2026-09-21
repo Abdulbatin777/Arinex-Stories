@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>Edit Story - StoryWorld</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<header>
+
+    <h1>📚 Edit Story</h1>
+
+    <nav>
+
+        <a href="{{ url_for('admin_dashboard') }}">
+            Dashboard
+        </a>
+
+        <a href="{{ url_for('admin_logout') }}">
+            Logout
+        </a>
+
+    </nav>
+
+</header>
+
+
+<main>
+
+<div class="form-container">
+
+    <h2>Edit Story</h2>
+
+    <form
+        method="POST"
+        enctype="multipart/form-data"
+    >
+
+        <label>Story Title</label>
+
+        <input
+            type="text"
+            name="title"
+            value="{{ story['title'] }}"
+            required
+        >
+
+
+        <label>Author</label>
+
+        <input
+            type="text"
+            name="author"
+            value="{{ story['author'] }}"
+            required
+        >
+
+
+        <label>Category</label>
+
+        <input
+            type="text"
+            name="category"
+            value="{{ story['category'] }}"
+            required
+        >
+
+
+        <label>Change Cover</label>
+
+        <input
+            type="file"
+            name="cover"
+            accept=".jpg,.jpeg,.png,.webp"
+        >
+
+
+        {% if story['cover'] %}
+
+            <p>Current cover:</p>
+
+            <img
+                class="edit-cover"
+                src="{{ url_for('static', filename='uploads/' + story['cover']) }}"
+                alt="Current cover"
+            >
+
+        {% endif %}
+
+
+        <button type="submit">
+            Save Changes
+        </button>
+
+    </form>
+
+</div>
+
+</main>
+
+</body>
+</html>

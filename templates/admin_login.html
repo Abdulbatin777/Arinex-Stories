@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>Admin Login - StoryWorld</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body class="admin-login-page">
+
+<div class="login-box">
+
+    <h1>🔐 Admin Login</h1>
+
+    <p>StoryWorld Administration</p>
+
+
+    {% if error %}
+
+        <div class="error">
+            {{ error }}
+        </div>
+
+    {% endif %}
+
+
+    <form method="POST">
+
+        <label>Username</label>
+
+        <input
+            type="text"
+            name="username"
+            placeholder="Admin username"
+            required
+        >
+
+
+        <label>Password</label>
+
+        <input
+            type="password"
+            name="password"
+            placeholder="Admin password"
+            required
+        >
+
+
+        <button type="submit">
+            Login
+        </button>
+
+    </form>
+
+
+    <a href="{{ url_for('index') }}">
+        ← Back to website
+    </a>
+
+</div>
+
+</body>
+</html>

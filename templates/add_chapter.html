@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <title>Add Chapter - StoryWorld</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<header>
+
+    <h1>📚 StoryWorld Admin</h1>
+
+    <nav>
+
+        <a href="{{ url_for('admin_dashboard') }}">
+            Dashboard
+        </a>
+
+        <a href="{{ url_for('admin_logout') }}">
+            Logout
+        </a>
+
+    </nav>
+
+</header>
+
+
+<main>
+
+<div class="form-container">
+
+    <h2>Add Chapter</h2>
+
+    <p>
+        Story: <strong>{{ story['title'] }}</strong>
+    </p>
+
+    <form method="POST">
+
+        <label>Chapter Title</label>
+
+        <input
+            type="text"
+            name="title"
+            placeholder="Chapter title"
+            required
+        >
+
+
+        <label>Chapter Content</label>
+
+        <textarea
+            name="content"
+            rows="18"
+            placeholder="Write your chapter here..."
+            required
+        ></textarea>
+
+
+        <button type="submit">
+            Publish Chapter
+        </button>
+
+    </form>
+
+</div>
+
+</main>
+
+</body>
+</html>

@@ -1,0 +1,789 @@
+
+from flask import Flask, render_template, request, redirect, url_for, session
+import sqlite3
+import os
+from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash, check_password_hash
+
+app = Flask(__name__)
+
+# =========================
+# SETTINGS
+# =========================
+
+app.secret_key = os.environ.get(
+    "SECRET_KEY",
+    "change-this-local-secret-key"
+)
+
+ADMIN_USERNAME = os.environ.get(
+    "ADMIN_USERNAME",
+    "admin"
+)
+
+ADMIN_PASSWORD = os.environ.get(
+    "ADMIN_PASSWORD",
+    "ChangeThisPassword123!"
+)
+
+ADMIN_PASSWORD_HASH = generate_password_hash(ADMIN_PASSWORD)
+
+UPLOAD_FOLDER = "static/uploads"
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+# =========================
+# DATABASE
+# =========================
+
+def get_db():
+    conn = sqlite3.connect("stories.db")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def create_database():
+    conn = get_db()
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS stories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            author TEXT NOT NULL,
+            category TEXT NOT NULL,
+            cover TEXT,
+            likes INTEGER DEFAULT 0
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS chapters (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            story_id INTEGER NOT NULL,
+            chapter_number INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            FOREIGN KEY (story_id) REFERENCES stories(id)
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            story_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            comment TEXT NOT NULL,
+            FOREIGN KEY (story_id) REFERENCES stories(id)
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+create_database()
+
+
+# =========================
+# HELPERS
+# =========================
+
+def admin_required():
+    return session.get("admin_logged_in") is True
+
+
+def allowed_file(filename):
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+    )
+
+
+# =========================
+# PUBLIC HOME
+# =========================
+@app.route("/")
+def index():
+    conn = get_db()
+
+    search = request.args.get("search", "").strip()
+    category = request.args.get("category", "").strip()
+
+    if search:
+        stories = conn.execute(
+            """
+            SELECT * FROM stories
+            WHERE title LIKE ? OR author LIKE ? OR category LIKE ?
+            ORDER BY id DESC
+            """,
+            (f"%{search}%", f"%{search}%", f"%{search}%")
+        ).fetchall()
+    elif category:
+        stories = conn.execute(
+            """
+            SELECT * FROM stories
+            WHERE category = ?
+            ORDER BY id DESC
+            """,
+            (category,)
+        ).fetchall()
+    else:
+        stories = conn.execute(
+            "SELECT * FROM stories ORDER BY id DESC"
+        ).fetchall()
+
+    categories = conn.execute(
+        "SELECT DISTINCT category FROM stories ORDER BY category"
+    ).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "index.html",
+        stories=stories,
+        categories=categories,
+        search=search,
+        selected_category=category
+    )
+
+# =========================
+# PUBLIC CHAPTER READER
+# =========================
+
+@app.route("/chapter/<int:chapter_id>")
+def chapter(chapter_id):
+    conn = get_db()
+
+    current = conn.execute("""
+        SELECT chapters.*, stories.title AS story_title
+        FROM chapters
+        JOIN stories ON chapters.story_id = stories.id
+        WHERE chapters.id = ?
+    """, (chapter_id,)).fetchone()
+
+    if current is None:
+        conn.close()
+        return "Chapter not found", 404
+
+    previous = conn.execute("""
+        SELECT id
+        FROM chapters
+        WHERE story_id = ?
+        AND chapter_number < ?
+        ORDER BY chapter_number DESC
+        LIMIT 1
+    """, (
+        current["story_id"],
+        current["chapter_number"]
+    )).fetchone()
+
+    next_chapter = conn.execute("""
+        SELECT id
+        FROM chapters
+        WHERE story_id = ?
+        AND chapter_number > ?
+        ORDER BY chapter_number ASC
+        LIMIT 1
+    """, (
+        current["story_id"],
+        current["chapter_number"]
+    )).fetchone()
+
+    conn.close()
+
+    return render_template(
+        "chapter.html",
+        chapter=current,
+        previous=previous,
+        next_chapter=next_chapter
+    )
+
+
+# =========================
+# PUBLIC LIKE
+# =========================
+
+@app.route("/like/<int:story_id>", methods=["POST"])
+def like_story(story_id):
+    conn = get_db()
+
+    conn.execute("""
+        UPDATE stories
+        SET likes = likes + 1
+        WHERE id = ?
+    """, (story_id,))
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("story", story_id=story_id))
+
+
+# =========================
+# PUBLIC COMMENT
+# =========================
+
+@app.route("/comment/<int:story_id>", methods=["POST"])
+def comment_story(story_id):
+    name = request.form.get("name", "").strip()
+    comment = request.form.get("comment", "").strip()
+
+    if name and comment:
+        conn = get_db()
+
+        conn.execute("""
+            INSERT INTO comments (story_id, name, comment)
+            VALUES (?, ?, ?)
+        """, (story_id, name, comment))
+
+        conn.commit()
+        conn.close()
+
+    return redirect(url_for("story", story_id=story_id))
+
+
+# =========================
+# ABOUT
+# =========================
+@app.route("/about")
+def about():
+    return render_template("about.html")
+# =========================================================
+# ADMIN LOGIN
+# =========================================================
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+
+    if request.method == "POST":
+
+        username = request.form.get("username", "")
+        password = request.form.get("password", "")
+
+        if (
+            username == ADMIN_USERNAME
+            and check_password_hash(ADMIN_PASSWORD_HASH, password)
+        ):
+            session["admin_logged_in"] = True
+            return redirect(url_for("admin_dashboard"))
+
+        return render_template(
+            "admin_login.html",
+            error="Invalid username or password."
+        )
+
+    return render_template("admin_login.html")
+
+
+# =========================================================
+# ADMIN DASHBOARD
+# =========================================================
+
+@app.route("/admin")
+def admin_dashboard():
+
+    if not admin_required():
+        return redirect(url_for("admin_login"))
+
+    conn = get_db()
+
+    stories = conn.execute("""
+        SELECT *
+        FROM stories
+        ORDER BY id DESC
+    """).fetchall()
+
+    comments = conn.execute("""
+        SELECT comments.*, stories.title AS story_title
+        FROM comments
+        JOIN stories ON comments.story_id = stories.id
+        ORDER BY comments.id DESC
+    """).fetchall()
+
+    story_count = conn.execute(
+        "SELECT COUNT(*) FROM stories"
+    ).fetchone()[0]
+
+    chapter_count = conn.execute(
+        "SELECT COUNT(*) FROM chapters"
+    ).fetchone()[0]
+
+    comment_count = conn.execute(
+        "SELECT COUNT(*) FROM comments"
+    ).fetchone()[0]
+
+    conn.close()
+
+    return render_template(
+        "admin.html",
+        stories=stories,
+        comments=comments,
+        story_count=story_count,
+        chapter_count=chapter_count,
+        comment_count=comment_count
+    )
+
+
+# =========================================================
+# ADMIN CREATE STORY
+# =========================================================
+
+@app.route("/admin/upload", methods=["GET", "POST"])
+def upload():
+
+    if not admin_required():
+        return redirect(url_for("admin_login"))
+
+    if request.method == "POST":
+
+        title = request.form.get("title", "").strip()
+        author = request.form.get("author", "").strip()
+        category = request.form.get("category", "").strip()
+
+        cover = request.files.get("cover")
+
+        filename = None
+
+        if cover and cover.filename:
+
+            if allowed_file(cover.filename):
+
+                filename = secure_filename(cover.filename)
+
+                cover.save(
+                    os.path.join(
+                        app.config["UPLOAD_FOLDER"],
+                        filename
+                    )
+                )
+
+        if title and author and category:
+
+            conn = get_db()
+
+            cursor = conn.execute("""
+                INSERT INTO stories
+                (title, author, category, cover)
+                VALUES (?, ?, ?, ?)
+            """, (
+                title,
+                author,
+                category,
+                filename
+            ))
+
+            story_id = cursor.lastrowid
+
+            conn.commit()
+            conn.close()
+
+            return redirect(
+                url_for(
+                    "add_chapter",
+                    story_id=story_id
+                )
+            )
+
+    return render_template("upload.html")
+
+
+# =========================================================
+# ADMIN ADD CHAPTER
+# =========================================================
+@app.route("/story/<int:story_id>")
+def story(story_id):
+    conn = get_db()
+
+    story_data = conn.execute(
+        "SELECT * FROM stories WHERE id = ?",
+        (story_id,)
+    ).fetchone()
+
+    if story_data is None:
+        conn.close()
+        return "Story not found", 404
+
+    chapters = conn.execute(
+        """
+        SELECT * FROM chapters
+        WHERE story_id = ?
+        ORDER BY chapter_number ASC
+        """,
+        (story_id,)
+    ).fetchall()
+
+    comments = conn.execute(
+        """
+        SELECT * FROM comments
+        WHERE story_id = ?
+        ORDER BY id DESC
+        """,
+        (story_id,)
+    ).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "story.html",
+        story=story_data,
+        chapters=chapters,
+        comments=comments
+    )
+@app.route(
+    "/admin/story/<int:story_id>/add-chapter",
+    methods=["GET", "POST"]
+)
+def add_chapter(story_id):
+
+    if not admin_required():
+        return redirect(url_for("admin_login"))
+
+    conn = get_db()
+
+    story_data = conn.execute(
+        "SELECT * FROM stories WHERE id = ?",
+        (story_id,)
+    ).fetchone()
+
+    if story_data is None:
+        conn.close()
+        return "Story not found", 404
+
+    if request.method == "POST":
+
+        title = request.form.get("title", "").strip()
+        content = request.form.get("content", "").strip()
+
+        last_chapter = conn.execute("""
+            SELECT MAX(chapter_number)
+            FROM chapters
+            WHERE story_id = ?
+        """, (story_id,)).fetchone()[0]
+
+        if last_chapter is None:
+            chapter_number = 1
+        else:
+            chapter_number = last_chapter + 1
+
+        if title and content:
+
+            conn.execute("""
+                INSERT INTO chapters
+                (
+                    story_id,
+                    chapter_number,
+                    title,
+                    content
+                )
+                VALUES (?, ?, ?, ?)
+            """, (
+                story_id,
+                chapter_number,
+                title,
+                content
+            ))
+
+            conn.commit()
+            conn.close()
+
+            return redirect(
+                url_for(
+                    "story",
+                    story_id=story_id
+                )
+            )
+
+    conn.close()
+
+    return render_template(
+        "add_chapter.html",
+        story=story_data
+    )
+
+
+# =========================================================
+# ADMIN EDIT STORY
+# =========================================================
+
+@app.route(
+    "/admin/story/<int:story_id>/edit",
+    methods=["GET", "POST"]
+)
+def edit_story(story_id):
+
+    if not admin_required():
+        return redirect(url_for("admin_login"))
+
+    conn = get_db()
+
+    story_data = conn.execute(
+        "SELECT * FROM stories WHERE id = ?",
+        (story_id,)
+    ).fetchone()
+
+    if story_data is None:
+        conn.close()
+        return "Story not found", 404
+
+    if request.method == "POST":
+
+        title = request.form.get("title", "").strip()
+        author = request.form.get("author", "").strip()
+        category = request.form.get("category", "").strip()
+
+        cover = request.files.get("cover")
+
+        new_cover = story_data["cover"]
+
+        if cover and cover.filename:
+
+            if allowed_file(cover.filename):
+
+                filename = secure_filename(cover.filename)
+
+                cover.save(
+                    os.path.join(
+                        app.config["UPLOAD_FOLDER"],
+                        filename
+                    )
+                )
+
+                new_cover = filename
+
+        conn.execute("""
+            UPDATE stories
+            SET title = ?,
+                author = ?,
+                category = ?,
+                cover = ?
+            WHERE id = ?
+        """, (
+            title,
+            author,
+            category,
+       new_cover,
+            story_id
+        ))
+
+        conn.commit()
+        conn.close()
+
+        return redirect(url_for("admin_dashboard"))
+
+    conn.close()
+
+    return render_template(
+        "edit_story.html",
+        story=story_data
+    )
+
+
+# =========================================================
+# ADMIN EDIT CHAPTER
+# =========================================================
+
+@app.route(
+    "/admin/chapter/<int:chapter_id>/edit",
+    methods=["GET", "POST"]
+)
+def edit_chapter(chapter_id):
+
+    if not admin_required():
+        return redirect(url_for("admin_login"))
+
+    conn = get_db()
+
+    chapter_data = conn.execute(
+        "SELECT * FROM chapters WHERE id = ?",
+        (chapter_id,)
+    ).fetchone()
+
+    if chapter_data is None:
+        conn.close()
+        return "Chapter not found", 404
+
+    if request.method == "POST":
+
+        title = request.form.get("title", "").strip()
+        content = request.form.get("content", "").strip()
+
+        conn.execute("""
+            UPDATE chapters
+            SET title = ?,
+                content = ?
+            WHERE id = ?
+        """, (
+            title,
+            content,
+            chapter_id
+        ))
+
+        conn.commit()
+
+        story_id = chapter_data["story_id"]
+
+        conn.close()
+
+        return redirect(
+            url_for(
+                "story",
+                story_id=story_id
+            )
+        )
+
+    conn.close()
+
+    return render_template(
+        "edit_chapter.html",
+        chapter=chapter_data
+    )
+
+
+# =========================================================
+# ADMIN DELETE STORY
+# =========================================================
+
+@app.route(
+    "/admin/delete-story/<int:story_id>",
+    methods=["POST"]
+)
+def delete_story(story_id):
+
+    if not admin_required():
+        return redirect(url_for("admin_login"))
+
+    conn = get_db()
+
+    story_data = conn.execute(
+        "SELECT cover FROM stories WHERE id = ?",
+        (story_id,)
+    ).fetchone()
+
+    if story_data:
+
+        cover = story_data["cover"]
+
+        if cover:
+            cover_path = os.path.join(
+                app.config["UPLOAD_FOLDER"],
+                cover
+            )
+
+            if os.path.exists(cover_path):
+                os.remove(cover_path)
+
+        conn.execute(
+            "DELETE FROM chapters WHERE story_id = ?",
+            (story_id,)
+        )
+
+        conn.execute(
+            "DELETE FROM comments WHERE story_id = ?",
+            (story_id,)
+        )
+
+        conn.execute(
+            "DELETE FROM stories WHERE id = ?",
+            (story_id,)
+        )
+
+        conn.commit()
+
+    conn.close()
+
+    return redirect(url_for("admin_dashboard"))
+
+
+# =========================================================
+# ADMIN DELETE CHAPTER
+# =========================================================
+
+@app.route(
+    "/admin/chapter/<int:chapter_id>/delete",
+    methods=["POST"]
+)
+def delete_chapter(chapter_id):
+
+    if not admin_required():
+        return redirect(url_for("admin_login"))
+
+    conn = get_db()
+
+    chapter_data = conn.execute(
+        "SELECT story_id FROM chapters WHERE id = ?",
+        (chapter_id,)
+    ).fetchone()
+
+    if chapter_data:
+
+        story_id = chapter_data["story_id"]
+
+        conn.execute(
+            "DELETE FROM chapters WHERE id = ?",
+            (chapter_id,)
+        )
+
+        conn.commit()
+
+        conn.close()
+
+        return redirect(
+            url_for(
+                "story",
+                story_id=story_id
+            )
+        )
+
+    conn.close()
+
+    return redirect(url_for("admin_dashboard"))
+
+
+# =========================================================
+# ADMIN DELETE COMMENT
+# =========================================================
+
+@app.route(
+    "/admin/delete-comment/<int:comment_id>",
+    methods=["POST"]
+)
+def delete_comment(comment_id):
+
+    if not admin_required():
+        return redirect(url_for("admin_login"))
+
+    conn = get_db()
+
+    conn.execute(
+        "DELETE FROM comments WHERE id = ?",
+        (comment_id,)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return redirect(url_for("admin_dashboard"))
+
+
+# =========================================================
+# ADMIN LOGOUT
+# =========================================================
+
+@app.route("/admin/logout")
+def admin_logout():
+
+    session.pop("admin_logged_in", None)
+
+    return redirect(url_for("index"))
+
+
+# =========================================================
+# RUN
+# =========================================================
+
+if __name__ == "__main__":
+    app.run()
